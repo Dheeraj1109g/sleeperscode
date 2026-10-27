@@ -1,8 +1,10 @@
-# T3 Code docs
+# Sleepers Code docs
 
-## Using T3 Code
+## Using Sleepers Code
 
 - [Install and first run](./user/install.md)
+- [Agent Hub](./user/agent-hub.md)
+- [Attention system](./user/attention.md)
 - [Portable Windows build](./user/portable-windows.md)
 - [Permission modes](./user/permission-modes.md)
 - [Keyboard shortcuts](./user/keybindings.md)
@@ -20,7 +22,7 @@ Mobile app: [apps/mobile/README.md](../apps/mobile/README.md)
 
 ---
 
-## Working on T3 Code
+## Working on Sleepers Code
 
 Everything below is for maintainers. Setup lives in the [root README](../README.md);
 policy in [CONTRIBUTING.md](../CONTRIBUTING.md); agent rules in [AGENTS.md](../AGENTS.md).
@@ -40,6 +42,7 @@ policy in [CONTRIBUTING.md](../CONTRIBUTING.md); agent rules in [AGENTS.md](../A
 
 ### Runbooks
 
+- [Source build and verification](./operations/source-build.md)
 - [Release](./operations/release.md)
 - [Observability](./operations/observability.md)
 - [Relay observability](./operations/relay-observability.md)
