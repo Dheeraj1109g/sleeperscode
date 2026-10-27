@@ -3,8 +3,13 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   describeResourceTelemetryStatus,
+  formatResourceByteRate,
   formatResourceBytes,
   formatResourceCpuPercent,
+  formatResourceCpuTime,
+  formatResourceDurationMicros,
+  formatResourceSampleInterval,
+  isElevatedResourceUsage,
   summarizeResourceTelemetry,
 } from "./resourceTelemetrySummary.ts";
 
@@ -53,5 +58,36 @@ describe("resource telemetry usage summary", () => {
     expect(formatResourceCpuPercent(-0.5)).toBe("0.00%");
     expect(formatResourceCpuPercent(Number.POSITIVE_INFINITY)).toBe("0.00%");
     expect(describeResourceTelemetryStatus("unavailable")).toBe("Unavailable");
+  });
+
+  it("formats transfer rates correctly", () => {
+    expect(formatResourceByteRate(1_024 * 1_024 * 2.5)).toBe("2.50 MB/s");
+    expect(formatResourceByteRate(512)).toBe("512 B/s");
+    expect(formatResourceByteRate(0)).toBe("0 B/s");
+  });
+
+  it("formats CPU runtime in appropriate units", () => {
+    expect(formatResourceCpuTime(4_500)).toBe("4.50s");
+    expect(formatResourceCpuTime(45_000)).toBe("45.0s");
+    expect(formatResourceCpuTime(120_000)).toBe("2.00m");
+    expect(formatResourceCpuTime(7_200_000)).toBe("2.00h");
+  });
+
+  it("formats high-resolution duration microseconds", () => {
+    expect(formatResourceDurationMicros(450)).toBe("450 µs");
+    expect(formatResourceDurationMicros(15_200)).toBe("15.20 ms");
+    expect(formatResourceDurationMicros(2_500_000)).toBe("2.50 s");
+  });
+
+  it("formats sample intervals into human units", () => {
+    expect(formatResourceSampleInterval(500)).toBe("500 ms");
+    expect(formatResourceSampleInterval(1_000)).toBe("1 second");
+    expect(formatResourceSampleInterval(2_500)).toBe("2.5 seconds");
+  });
+
+  it("detects elevated resource usage accurately", () => {
+    expect(isElevatedResourceUsage(85, 1_000_000)).toBe(true);
+    expect(isElevatedResourceUsage(50, 5 * 1024 * 1024 * 1024)).toBe(true);
+    expect(isElevatedResourceUsage(20, 500 * 1024 * 1024)).toBe(false);
   });
 });
