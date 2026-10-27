@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Distributed Lock &amp; Lease Concurrency Monitor</title>
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --card-bg: #111827;
+        --border: #1f2937;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 20px;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .panel {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .panel-body {
+        padding: 16px;
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      select,
+      input {
+        width: 100%;
+        background: #080d1a;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: var(--mono);
+        outline: none;
+      }
+
+      .btn {
+        background: var(--accent);
+        color: #0b0f19;
+        font-weight: 600;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: opacity 0.15s ease;
+      }
+
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .btn-secondary {
+        background: #1f2937;
+        color: var(--text);
+      }
+      .btn-secondary:hover {
+        background: #374151;
+      }
+
+      /* Telemetry Bar */
+      .telemetry-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      .stat-box {
+        background: #080d1a;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px;
+        text-align: center;
+      }
+
+      .stat-num {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .stat-desc {
+        font-size: 9px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+
+      /* Resource Lease Cards */
+      .resource-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .resource-card {
+        background: #080d1a;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .resource-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--mono);
+      }
+
+      .res-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #f8fafc;
+      }
+
+      .res-owner {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent);
+      }
+
+      .res-owner.free {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--success);
+      }
+
+      .res-progress-wrap {
+        width: 100%;
+        height: 6px;
+        background: #1f2937;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 4px;
+      }
+
+      .res-progress {
+        height: 100%;
+        background: var(--accent);
+        width: 100%;
+        transition: width 0.1s linear;
+      }
+
+      .res-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Left: Concurrency Dispatcher -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Resource Lease Controller</div>
+        <span style="font-size: 11px; color: var(--muted)">DistributedLockManager</span>
+      </div>
+
+      <div class="panel-body">
+        <div>
+          <label for="workerSelect">Simulated Worker Agent</label>
+          <select id="workerSelect">
+            <option value="worker-alpha">worker-alpha (Background Indexer)</option>
+            <option value="worker-beta">worker-beta (Git Commit Task)</option>
+            <option value="worker-gamma">worker-gamma (Telemetry Exporter)</option>
+            <option value="worker-delta">worker-delta (File Watcher)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="resSelect">Target Shared Resource</label>
+          <select id="resSelect">
+            <option value="db_transactions">db_transactions (Mutex)</option>
+            <option value="git_head">git_head (Repository Lock)</option>
+            <option value="config_schema">config_schema (Shared Read/Write)</option>
+            <option value="telemetry_sink">telemetry_sink (Rate Limited)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ttlInput">Lease TTL (Milliseconds)</label>
+          <input type="number" id="ttlInput" value="6000" min="1000" max="30000" step="500" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px">
+          <button class="btn" id="btnAcquire">🔒 Acquire Lock</button>
+          <button class="btn btn-secondary" id="btnRenew">⏱️ Renew Lease (+3000ms)</button>
+          <button class="btn btn-secondary" id="btnRelease">🔓 Release Lock</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0" />
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label>Deadlock-Free Batch Acquisition</label>
+          <button class="btn" style="background: #8b5cf6; color: #fff" id="btnBatchAcquire">
+            📦 Acquire All 4 Resources
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Real-Time Grid -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Active Resource Locks &amp; Fencing Tokens</div>
+        <div style="font-size: 11px; color: var(--muted)">Clock Ticks: 100ms</div>
+      </div>
+
+      <div class="panel-body">
+        <div class="telemetry-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="statActive">0</div>
+            <div class="stat-desc">Active Locks</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statContention">0</div>
+            <div class="stat-desc">Contentions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statExpired">0</div>
+            <div class="stat-desc">Expired Leases</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="statFencing">1042</div>
+            <div class="stat-desc">Latest Fencing Token</div>
+          </div>
+        </div>
+
+        <label style="margin-top: 6px">Monitored Resources</label>
+        <div class="resource-list" id="resourceList"></div>
+      </div>
+    </section>
+
+    <script>
+      const RESOURCES = {
+        db_transactions: { owner: null, expiresAt: 0, ttlMs: 0, fencingToken: null, reentrancy: 0 },
+        git_head: { owner: null, expiresAt: 0, ttlMs: 0, fencingToken: null, reentrancy: 0 },
+        config_schema: { owner: null, expiresAt: 0, ttlMs: 0, fencingToken: null, reentrancy: 0 },
+        telemetry_sink: { owner: null, expiresAt: 0, ttlMs: 0, fencingToken: null, reentrancy: 0 },
+      };
+
+      let globalFencingToken = 1042;
+      let contentionCount = 0;
+      let expiredCount = 0;
+
+      const workerSelect = document.getElementById("workerSelect");
+      const resSelect = document.getElementById("resSelect");
+      const ttlInput = document.getElementById("ttlInput");
+      const btnAcquire = document.getElementById("btnAcquire");
+      const btnRenew = document.getElementById("btnRenew");
+      const btnRelease = document.getElementById("btnRelease");
+      const btnBatchAcquire = document.getElementById("btnBatchAcquire");
+      const resourceList = document.getElementById("resourceList");
+
+      const statActive = document.getElementById("statActive");
+      const statContention = document.getElementById("statContention");
+      const statExpired = document.getElementById("statExpired");
+      const statFencing = document.getElementById("statFencing");
+
+      function renderResources() {
+        resourceList.innerHTML = "";
+        let activeCount = 0;
+        const now = Date.now();
+
+        for (const [key, res] of Object.entries(RESOURCES)) {
+          if (res.owner && now >= res.expiresAt) {
+            // Lease expired
+            res.owner = null;
+            res.reentrancy = 0;
+            expiredCount++;
+          }
+
+          const isLocked = Boolean(res.owner);
+          if (isLocked) activeCount++;
+
+          const remainingMs = isLocked ? Math.max(0, res.expiresAt - now) : 0;
+          const pct = isLocked ? Math.min(100, (remainingMs / res.ttlMs) * 100) : 0;
+
+          const card = document.createElement("div");
+          card.className = "resource-card";
+          card.innerHTML = `
+          <div class="resource-header">
+            <span class="res-name">${key}</span>
+            <span class="res-owner ${isLocked ? "" : "free"}">${isLocked ? res.owner : "UNLOCKED"}</span>
+          </div>
+          <div class="res-progress-wrap">
+            <div class="res-progress" style="width:${pct}%; background:${pct < 20 ? "#ef4444" : pct < 50 ? "#f59e0b" : "#38bdf8"};"></div>
+          </div>
+          <div class="res-meta">
+            <span>Fencing: ${res.fencingToken ? "#" + res.fencingToken : "None"}</span>
+            <span>Reentrancy: ${res.reentrancy}</span>
+            <span>TTL Remaining: ${remainingMs}ms</span>
+          </div>
+        `;
+          resourceList.appendChild(card);
+        }
+
+        statActive.textContent = activeCount;
+        statContention.textContent = contentionCount;
+        statExpired.textContent = expiredCount;
+        statFencing.textContent = globalFencingToken;
+      }
+
+      btnAcquire.addEventListener("click", () => {
+        const worker = workerSelect.value;
+        const resKey = resSelect.value;
+        const ttl = parseInt(ttlInput.value, 10) || 5000;
+        const res = RESOURCES[resKey];
+
+        if (res.owner && res.owner !== worker && Date.now() < res.expiresAt) {
+          contentionCount++;
+          alert(`Contention detected! Resource "${resKey}" is already held by "${res.owner}".`);
+          renderResources();
+          return;
+        }
+
+        if (res.owner === worker) {
+          res.reentrancy++;
+        } else {
+          res.owner = worker;
+          res.reentrancy = 1;
+          res.fencingToken = ++globalFencingToken;
+        }
+        res.ttlMs = ttl;
+        res.expiresAt = Date.now() + ttl;
+        renderResources();
+      });
+
+      btnRenew.addEventListener("click", () => {
+        const worker = workerSelect.value;
+        const resKey = resSelect.value;
+        const res = RESOURCES[resKey];
+        if (res.owner === worker && Date.now() < res.expiresAt) {
+          res.expiresAt += 3000;
+          res.ttlMs += 3000;
+        }
+        renderResources();
+      });
+
+      btnRelease.addEventListener("click", () => {
+        const worker = workerSelect.value;
+        const resKey = resSelect.value;
+        const res = RESOURCES[resKey];
+        if (res.owner === worker) {
+          if (res.reentrancy > 1) {
+            res.reentrancy--;
+          } else {
+            res.owner = null;
+            res.reentrancy = 0;
+            res.expiresAt = 0;
+          }
+        }
+        renderResources();
+      });
+
+      btnBatchAcquire.addEventListener("click", () => {
+        const worker = workerSelect.value;
+        const sortedKeys = Object.keys(RESOURCES).sort(); // Lexicographical sorting for deadlock safety
+        globalFencingToken += 4;
+        sortedKeys.forEach((k) => {
+          RESOURCES[k].owner = worker;
+          RESOURCES[k].reentrancy = 1;
+          RESOURCES[k].ttlMs = 8000;
+          RESOURCES[k].expiresAt = Date.now() + 8000;
+          RESOURCES[k].fencingToken = globalFencingToken;
+        });
+        renderResources();
+      });
+
+      setInterval(renderResources, 100);
+      renderResources();
+    </script>
+  </body>
+</html>
