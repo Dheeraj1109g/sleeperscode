@@ -238,6 +238,50 @@
     "./taskTimeline": {
       "types": "./src/taskTimeline.ts",
       "import": "./src/taskTimeline.ts"
+    },
+    "./modelPricingCatalog": {
+      "types": "./src/modelPricingCatalog.ts",
+      "import": "./src/modelPricingCatalog.ts"
+    },
+    "./retryPolicy": {
+      "types": "./src/retryPolicy.ts",
+      "import": "./src/retryPolicy.ts"
+    },
+    "./terminalAnsiParser": {
+      "types": "./src/terminalAnsiParser.ts",
+      "import": "./src/terminalAnsiParser.ts"
+    },
+    "./telemetryBenchmark": {
+      "types": "./src/telemetryBenchmark.ts",
+      "import": "./src/telemetryBenchmark.ts"
+    },
+    "./diffParser": {
+      "types": "./src/diffParser.ts",
+      "import": "./src/diffParser.ts"
+    },
+    "./agentCommandValidator": {
+      "types": "./src/agentCommandValidator.ts",
+      "import": "./src/agentCommandValidator.ts"
+    },
+    "./vectorSearchEngine": {
+      "types": "./src/vectorSearchEngine.ts",
+      "import": "./src/vectorSearchEngine.ts"
+    },
+    "./taskDependencyGraph": {
+      "types": "./src/taskDependencyGraph.ts",
+      "import": "./src/taskDependencyGraph.ts"
+    },
+    "./fileWatcherDebouncer": {
+      "types": "./src/fileWatcherDebouncer.ts",
+      "import": "./src/fileWatcherDebouncer.ts"
+    },
+    "./conversationHistoryManager": {
+      "types": "./src/conversationHistoryManager.ts",
+      "import": "./src/conversationHistoryManager.ts"
+    },
+    "./cronEngine": {
+      "types": "./src/cronEngine.ts",
+      "import": "./src/cronEngine.ts"
     }
   },
   "scripts": {
