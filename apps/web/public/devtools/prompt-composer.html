@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Prompt Template Composer &amp; Markdown Previewer</title>
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --card-bg: #111827;
+        --border: #1f2937;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .panel {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .panel-body {
+        padding: 16px;
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      textarea {
+        width: 100%;
+        background: #080d1a;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: var(--mono);
+        outline: none;
+        resize: none;
+        line-height: 1.5;
+      }
+
+      textarea:focus {
+        border-color: var(--accent);
+      }
+
+      .btn {
+        background: var(--accent);
+        color: #0b0f19;
+        font-weight: 600;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .btn-secondary {
+        background: #1f2937;
+        color: var(--text);
+      }
+      .btn-secondary:hover {
+        background: #374151;
+      }
+
+      .rendered-box {
+        flex: 1;
+        background: #080d1a;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 14px;
+        font-family: var(--sans);
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .stats-row {
+        display: flex;
+        gap: 12px;
+      }
+
+      .pill {
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+
+      .pill strong {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Left: Template & Variables -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Prompt Template &amp; Variable Context</div>
+        <span style="font-size: 11px; color: var(--muted)">promptTemplateComposer</span>
+      </div>
+
+      <div class="panel-body">
+        <div>
+          <label for="templateInput">Template Syntax (Supports {{var}} and {{#if cond}})</label>
+          <textarea id="templateInput" style="height: 180px">
+You are an expert AI software engineer assisting {{contributor}} on repository {{repo}}.
+
+Task Objective:
+{{task_description}}
+
+{{#if requires_tests}}
+Requirements:
+- Write comprehensive Vitest test suites.
+- Ensure 100% test coverage with zero regressions.
+{{/if}}
+
+Please format your response in clean Markdown with clickable file links.</textarea
+          >
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <label for="variablesInput">Context Variables (JSON)</label>
+          <textarea id="variablesInput" style="flex: 1">
+{
+  "contributor": "Dheeraj1109g",
+  "repo": "yuno7777/sleeperscode",
+  "task_description": "Implement distributed lock coordination, WebSocket multiplexing, and AST parsing.",
+  "requires_tests": true
+}</textarea
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Rendered Output -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Composed Prompt Preview</div>
+        <button class="btn btn-secondary" id="btnCopy">Copy Prompt</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="stats-row">
+          <div class="pill">Estimated Tokens: <strong id="tokenCount">0</strong></div>
+          <div class="pill">Variables Injected: <strong id="varCount">0</strong></div>
+          <div class="pill">
+            Status: <strong id="validStatus" style="color: var(--success)">Valid</strong>
+          </div>
+        </div>
+
+        <div class="rendered-box" id="renderedOutput"></div>
+      </div>
+    </section>
+
+    <script>
+      const templateInput = document.getElementById("templateInput");
+      const variablesInput = document.getElementById("variablesInput");
+      const renderedOutput = document.getElementById("renderedOutput");
+      const tokenCount = document.getElementById("tokenCount");
+      const varCount = document.getElementById("varCount");
+      const validStatus = document.getElementById("validStatus");
+      const btnCopy = document.getElementById("btnCopy");
+
+      function composePrompt() {
+        const template = templateInput.value;
+        let vars = {};
+
+        try {
+          vars = JSON.parse(variablesInput.value);
+          validStatus.textContent = "Valid";
+          validStatus.style.color = "#10b981";
+        } catch (err) {
+          validStatus.textContent = "Invalid JSON in variables";
+          validStatus.style.color = "#ef4444";
+          return;
+        }
+
+        let rendered = template;
+
+        // Handle conditional blocks: {{#if key}} ... {{/if}}
+        rendered = rendered.replace(
+          /\{\{#if\s+([a-zA-Z0-9_]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
+          (_, key, content) => {
+            return Boolean(vars[key]) ? content : "";
+          },
+        );
+
+        // Handle variable substitutions: {{key}}
+        let injectedCount = 0;
+        rendered = rendered.replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key) => {
+          if (vars[key] !== undefined) {
+            injectedCount++;
+            return vars[key];
+          }
+          return `[MISSING: {{${key}}}]`;
+        });
+
+        renderedOutput.textContent = rendered.trim();
+        varCount.textContent = injectedCount;
+        tokenCount.textContent = Math.round(rendered.length / 4);
+      }
+
+      templateInput.addEventListener("input", composePrompt);
+      variablesInput.addEventListener("input", composePrompt);
+
+      btnCopy.addEventListener("click", () => {
+        navigator.clipboard.writeText(renderedOutput.textContent);
+        btnCopy.textContent = "Copied!";
+        setTimeout(() => {
+          btnCopy.textContent = "Copy Prompt";
+        }, 1500);
+      });
+
+      composePrompt();
+    </script>
+  </body>
+</html>
