@@ -135,3 +135,67 @@ export function makeWindow(days: number, now = new Date()): UsageSummaryInput {
     timeZone,
   };
 }
+
+/**
+ * Formats real-time token generation velocity into a readable string.
+ *
+ * @example
+ * formatTokenRate(45.2) // "45.2 tok/s"
+ * formatTokenRate(1200) // "1.2K tok/s"
+ */
+export function formatTokenRate(tokensPerSecond: number): string {
+  const rate = Number.isFinite(tokensPerSecond) ? Math.max(0, tokensPerSecond) : 0;
+  if (rate >= 1e6) return `${(rate / 1e6).toFixed(1)}M tok/s`;
+  if (rate >= 1e3) return `${(rate / 1e3).toFixed(1)}K tok/s`;
+  return `${rate.toFixed(rate >= 10 ? 1 : 2)} tok/s`;
+}
+
+/**
+ * Formats turn or execution duration in milliseconds into a concise human string.
+ *
+ * @example
+ * formatDurationHuman(450) // "450ms"
+ * formatDurationHuman(12_400) // "12.4s"
+ * formatDurationHuman(135_000) // "2m 15s"
+ */
+export function formatDurationHuman(ms: number): string {
+  const elapsed = Number.isFinite(ms) ? Math.max(0, ms) : 0;
+  if (elapsed < 1_000) return `${Math.round(elapsed)}ms`;
+  const totalSeconds = elapsed / 1_000;
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(1)}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = Math.round(totalSeconds % 60);
+  if (minutes < 60) {
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+/**
+ * Formats a cost comparison percentage with sign.
+ *
+ * @example
+ * formatCostDeltaPercent(15, 10) // "+50.0%"
+ * formatCostDeltaPercent(8, 10)  // "-20.0%"
+ * formatCostDeltaPercent(10, 0)  // "+100.0%"
+ */
+export function formatCostDeltaPercent(currentCost: number, previousCost: number): string {
+  if (!Number.isFinite(currentCost) || !Number.isFinite(previousCost) || previousCost <= 0) {
+    return currentCost > 0 ? "+100.0%" : "+0.0%";
+  }
+  const delta = ((currentCost - previousCost) / previousCost) * 100;
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
+  return `${sign}${delta.toFixed(1)}%`;
+}
+
+/**
+ * Calculates the average daily token consumption.
+ */
+export function calculateDailyAverageTokens(totalTokens: number, daysCount: number): number {
+  if (!Number.isFinite(totalTokens) || !Number.isFinite(daysCount) || daysCount <= 0) {
+    return 0;
+  }
+  return Math.round(Math.max(0, totalTokens) / daysCount);
+}
