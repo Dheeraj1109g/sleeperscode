@@ -282,6 +282,50 @@
     "./cronEngine": {
       "types": "./src/cronEngine.ts",
       "import": "./src/cronEngine.ts"
+    },
+    "./llmFunctionCallingProtocol": {
+      "types": "./src/llmFunctionCallingProtocol.ts",
+      "import": "./src/llmFunctionCallingProtocol.ts"
+    },
+    "./codeASTTokenParser": {
+      "types": "./src/codeASTTokenParser.ts",
+      "import": "./src/codeASTTokenParser.ts"
+    },
+    "./virtualFileSystemMock": {
+      "types": "./src/virtualFileSystemMock.ts",
+      "import": "./src/virtualFileSystemMock.ts"
+    },
+    "./markdownDocumentationEngine": {
+      "types": "./src/markdownDocumentationEngine.ts",
+      "import": "./src/markdownDocumentationEngine.ts"
+    },
+    "./agentRateLimiterTokenBucket": {
+      "types": "./src/agentRateLimiterTokenBucket.ts",
+      "import": "./src/agentRateLimiterTokenBucket.ts"
+    },
+    "./taskTelemetryAlertEngine": {
+      "types": "./src/taskTelemetryAlertEngine.ts",
+      "import": "./src/taskTelemetryAlertEngine.ts"
+    },
+    "./promptTemplateComposer": {
+      "types": "./src/promptTemplateComposer.ts",
+      "import": "./src/promptTemplateComposer.ts"
+    },
+    "./jsonRpcStreamProtocol": {
+      "types": "./src/jsonRpcStreamProtocol.ts",
+      "import": "./src/jsonRpcStreamProtocol.ts"
+    },
+    "./environmentSecretMasker": {
+      "types": "./src/environmentSecretMasker.ts",
+      "import": "./src/environmentSecretMasker.ts"
+    },
+    "./websocketConnectionPool": {
+      "types": "./src/websocketConnectionPool.ts",
+      "import": "./src/websocketConnectionPool.ts"
+    },
+    "./distributedLockManager": {
+      "types": "./src/distributedLockManager.ts",
+      "import": "./src/distributedLockManager.ts"
     }
   },
   "scripts": {
