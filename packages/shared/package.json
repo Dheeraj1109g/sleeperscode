@@ -262,6 +262,26 @@
     "./agentCommandValidator": {
       "types": "./src/agentCommandValidator.ts",
       "import": "./src/agentCommandValidator.ts"
+    },
+    "./vectorSearchEngine": {
+      "types": "./src/vectorSearchEngine.ts",
+      "import": "./src/vectorSearchEngine.ts"
+    },
+    "./taskDependencyGraph": {
+      "types": "./src/taskDependencyGraph.ts",
+      "import": "./src/taskDependencyGraph.ts"
+    },
+    "./fileWatcherDebouncer": {
+      "types": "./src/fileWatcherDebouncer.ts",
+      "import": "./src/fileWatcherDebouncer.ts"
+    },
+    "./conversationHistoryManager": {
+      "types": "./src/conversationHistoryManager.ts",
+      "import": "./src/conversationHistoryManager.ts"
+    },
+    "./cronEngine": {
+      "types": "./src/cronEngine.ts",
+      "import": "./src/cronEngine.ts"
     }
   },
   "scripts": {
