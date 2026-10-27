@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Token Bucket Rate Limiter &amp; Alert Engine</title>
+    <style>
+      :root {
+        --bg: #0b0f19;
+        --card-bg: #111827;
+        --border: #1f2937;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 20px;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .panel {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .panel-body {
+        padding: 16px;
+        overflow-y: auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .btn {
+        background: var(--accent);
+        color: #0b0f19;
+        font-weight: 600;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .btn-danger {
+        background: #ef4444;
+        color: #fff;
+      }
+      .btn-secondary {
+        background: #1f2937;
+        color: var(--text);
+      }
+      .btn-secondary:hover {
+        background: #374151;
+      }
+
+      /* Bucket Tank Visualization */
+      .tank-container {
+        background: #080d1a;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        height: 240px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column-reverse;
+      }
+
+      .tank-liquid {
+        background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+        width: 100%;
+        transition: height 0.1s ease;
+        opacity: 0.85;
+      }
+
+      .tank-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        font-family: var(--mono);
+        z-index: 2;
+      }
+
+      .tank-tokens {
+        font-size: 32px;
+        font-weight: 800;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .tank-cap {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      /* Stats */
+      .stat-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .stat-pill {
+        background: #080d1a;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px;
+        text-align: center;
+      }
+
+      .stat-val {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .stat-lbl {
+        font-size: 9px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+
+      /* Alert Feed */
+      .alert-feed {
+        background: #080d1a;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        flex: 1;
+        overflow-y: auto;
+        font-family: var(--mono);
+        font-size: 11px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .alert-item {
+        padding: 6px 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.02);
+        border-left: 3px solid var(--accent);
+      }
+
+      .alert-item.warn {
+        border-color: var(--warning);
+        color: #fef08a;
+      }
+      .alert-item.crit {
+        border-color: var(--danger);
+        color: #fca5a5;
+      }
+      .alert-item.ok {
+        border-color: var(--success);
+        color: #a7f3d0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Left: Limiter Controls -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Token Bucket Configuration</div>
+        <span style="font-size: 11px; color: var(--muted)">agentRateLimiterTokenBucket</span>
+      </div>
+
+      <div class="panel-body">
+        <div>
+          <label
+            >Bucket Capacity:
+            <strong id="lblCap" style="color: var(--accent)">100</strong> tokens</label
+          >
+          <input type="range" id="rangeCap" min="10" max="500" value="100" step="10" />
+        </div>
+
+        <div>
+          <label
+            >Refill Rate: <strong id="lblRate" style="color: var(--accent)">20</strong> tokens /
+            sec</label
+          >
+          <input type="range" id="rangeRate" min="1" max="100" value="20" step="1" />
+        </div>
+
+        <div>
+          <label
+            >Burst Request Cost:
+            <strong id="lblCost" style="color: var(--accent)">15</strong> tokens / req</label
+          >
+          <input type="range" id="rangeCost" min="1" max="50" value="15" step="1" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto">
+          <button class="btn" id="btnBurstOne">⚡ Send Single Request</button>
+          <button class="btn btn-danger" id="btnBurstTen">
+            🔥 Burst 10 Requests (Stress Test)
+          </button>
+          <button class="btn btn-secondary" id="btnReset">Reset Bucket</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Visualizer & Alerts -->
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Bucket Tank &amp; Telemetry Alerts</div>
+        <button
+          class="btn btn-secondary"
+          style="padding: 2px 8px; font-size: 11px"
+          id="btnClearAlerts"
+        >
+          Clear Alerts
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <div class="stat-bar">
+          <div class="stat-pill">
+            <div class="stat-val" id="statAllowed">0</div>
+            <div class="stat-lbl">Allowed</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-val" id="statThrottled" style="color: var(--danger)">0</div>
+            <div class="stat-lbl">429 Throttled</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-val" id="statUtilization">0%</div>
+            <div class="stat-lbl">Capacity Used</div>
+          </div>
+        </div>
+
+        <!-- Water Tank -->
+        <div class="tank-container">
+          <div class="tank-liquid" id="tankLiquid" style="height: 100%"></div>
+          <div class="tank-overlay">
+            <div class="tank-tokens" id="tankTokens">100</div>
+            <div class="tank-cap">TOKENS AVAILABLE</div>
+          </div>
+        </div>
+
+        <label>Telemetry Alert Trigger Feed</label>
+        <div class="alert-feed" id="alertFeed"></div>
+      </div>
+    </section>
+
+    <script>
+      let capacity = 100;
+      let tokens = 100;
+      let refillRate = 20; // per sec
+      let cost = 15;
+      let lastRefill = Date.now();
+
+      let allowedCount = 0;
+      let throttledCount = 0;
+
+      const rangeCap = document.getElementById("rangeCap");
+      const rangeRate = document.getElementById("rangeRate");
+      const rangeCost = document.getElementById("rangeCost");
+      const lblCap = document.getElementById("lblCap");
+      const lblRate = document.getElementById("lblRate");
+      const lblCost = document.getElementById("lblCost");
+
+      const tankLiquid = document.getElementById("tankLiquid");
+      const tankTokens = document.getElementById("tankTokens");
+      const statAllowed = document.getElementById("statAllowed");
+      const statThrottled = document.getElementById("statThrottled");
+      const statUtilization = document.getElementById("statUtilization");
+      const alertFeed = document.getElementById("alertFeed");
+
+      const btnBurstOne = document.getElementById("btnBurstOne");
+      const btnBurstTen = document.getElementById("btnBurstTen");
+      const btnReset = document.getElementById("btnReset");
+      const btnClearAlerts = document.getElementById("btnClearAlerts");
+
+      function logAlert(level, msg) {
+        const item = document.createElement("div");
+        item.className = `alert-item ${level}`;
+        const time = new Date().toTimeString().split(" ")[0];
+        item.textContent = `[${time}] ${msg}`;
+        alertFeed.appendChild(item);
+        alertFeed.scrollTop = alertFeed.scrollHeight;
+      }
+
+      function refill() {
+        const now = Date.now();
+        const elapsedSec = (now - lastRefill) / 1000;
+        lastRefill = now;
+
+        tokens = Math.min(capacity, tokens + elapsedSec * refillRate);
+        updateDisplay();
+      }
+
+      function updateDisplay() {
+        const pct = Math.max(0, Math.min(100, (tokens / capacity) * 100));
+        tankLiquid.style.height = `${pct}%`;
+        tankLiquid.style.background =
+          pct < 20
+            ? "linear-gradient(180deg, #ef4444 0%, #b91c1c 100%)"
+            : pct < 50
+              ? "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)"
+              : "linear-gradient(180deg, #38bdf8 0%, #0284c7 100%)";
+        tankTokens.textContent = Math.round(tokens);
+        statUtilization.textContent = Math.round(100 - pct) + "%";
+        statAllowed.textContent = allowedCount;
+        statThrottled.textContent = throttledCount;
+      }
+
+      function tryAcquire(reqCost) {
+        refill();
+        if (tokens >= reqCost) {
+          tokens -= reqCost;
+          allowedCount++;
+          if (tokens / capacity < 0.2) {
+            logAlert(
+              "warn",
+              `Warning: Bucket capacity low (${Math.round(tokens)}/${capacity} remaining)`,
+            );
+          }
+          updateDisplay();
+          return true;
+        } else {
+          throttledCount++;
+          logAlert(
+            "crit",
+            `HTTP 429: Rate limit exceeded! Need ${reqCost} tokens, only ${Math.round(tokens)} available`,
+          );
+          updateDisplay();
+          return false;
+        }
+      }
+
+      rangeCap.addEventListener("input", () => {
+        capacity = parseInt(rangeCap.value, 10);
+        lblCap.textContent = capacity;
+        tokens = Math.min(tokens, capacity);
+        updateDisplay();
+      });
+
+      rangeRate.addEventListener("input", () => {
+        refillRate = parseInt(rangeRate.value, 10);
+        lblRate.textContent = refillRate;
+      });
+
+      rangeCost.addEventListener("input", () => {
+        cost = parseInt(rangeCost.value, 10);
+        lblCost.textContent = cost;
+      });
+
+      btnBurstOne.addEventListener("click", () => tryAcquire(cost));
+
+      btnBurstTen.addEventListener("click", () => {
+        for (let i = 0; i < 10; i++) {
+          setTimeout(() => tryAcquire(cost), i * 30);
+        }
+      });
+
+      btnReset.addEventListener("click", () => {
+        tokens = capacity;
+        allowedCount = 0;
+        throttledCount = 0;
+        logAlert("ok", "Bucket state reset to 100% capacity.");
+        updateDisplay();
+      });
+
+      btnClearAlerts.addEventListener("click", () => {
+        alertFeed.innerHTML = "";
+      });
+
+      setInterval(refill, 100);
+      logAlert("ok", "Rate limiter token bucket initialized and running.");
+    </script>
+  </body>
+</html>
