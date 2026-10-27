@@ -238,6 +238,30 @@
     "./taskTimeline": {
       "types": "./src/taskTimeline.ts",
       "import": "./src/taskTimeline.ts"
+    },
+    "./modelPricingCatalog": {
+      "types": "./src/modelPricingCatalog.ts",
+      "import": "./src/modelPricingCatalog.ts"
+    },
+    "./retryPolicy": {
+      "types": "./src/retryPolicy.ts",
+      "import": "./src/retryPolicy.ts"
+    },
+    "./terminalAnsiParser": {
+      "types": "./src/terminalAnsiParser.ts",
+      "import": "./src/terminalAnsiParser.ts"
+    },
+    "./telemetryBenchmark": {
+      "types": "./src/telemetryBenchmark.ts",
+      "import": "./src/telemetryBenchmark.ts"
+    },
+    "./diffParser": {
+      "types": "./src/diffParser.ts",
+      "import": "./src/diffParser.ts"
+    },
+    "./agentCommandValidator": {
+      "types": "./src/agentCommandValidator.ts",
+      "import": "./src/agentCommandValidator.ts"
     }
   },
   "scripts": {
