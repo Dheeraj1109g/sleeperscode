@@ -29,6 +29,7 @@ import {
   getProviderOptionStringSelectionValue,
 } from "@t3tools/shared/model";
 import { resolveSpawnCommand } from "@t3tools/shared/shell";
+import { stripAnsi } from "@t3tools/shared/String";
 
 import {
   buildBooleanOptionDescriptor,
@@ -579,12 +580,6 @@ export function getCursorFallbackModels(
 
 /** Timeout for `agent about` — it's slower than a simple `--version` probe. */
 const ABOUT_TIMEOUT_MS = 8_000;
-
-/** Strip ANSI escape sequences so we can parse plain key-value lines. */
-function stripAnsi(text: string): string {
-  // eslint-disable-next-line no-control-regex
-  return text.replace(/\x1b\[[0-9;]*[A-Za-z]|\x1b\].*?\x07/g, "");
-}
 
 /**
  * Extract a value from `agent about` key-value output.
