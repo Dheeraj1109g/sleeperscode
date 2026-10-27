@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SleepersCode DevTools &amp; Interactive Playground Hub</title>
+    <style>
+      :root {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-tertiary: #334155;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-hover: #0284c7;
+        --border: #334155;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --font-sans:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar Navigation */
+      .sidebar {
+        width: 280px;
+        background-color: var(--bg-secondary);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
+
+      .brand {
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand svg {
+        width: 28px;
+        height: 28px;
+        fill: var(--accent);
+      }
+
+      .brand h1 {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+
+      .brand .version {
+        font-size: 10px;
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: auto;
+        font-family: var(--font-mono);
+      }
+
+      .nav-menu {
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 6px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        cursor: pointer;
+      }
+
+      .nav-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+      }
+
+      .nav-item.active {
+        background-color: rgba(56, 189, 248, 0.15);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .nav-item .icon {
+        font-size: 16px;
+      }
+
+      .sidebar-footer {
+        padding: 16px 20px;
+        border-top: 1px solid var(--border);
+        font-size: 11px;
+        color: var(--text-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        background-color: var(--success);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--success);
+      }
+
+      /* Main Container & Iframe */
+      .main-viewport {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .topbar {
+        height: 52px;
+        background-color: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+      }
+
+      .tool-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn {
+        background: var(--bg-tertiary);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: background 0.15s ease;
+      }
+
+      .btn:hover {
+        background: #475569;
+      }
+
+      .btn-accent {
+        background: var(--accent);
+        color: #0f172a;
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+
+      .btn-accent:hover {
+        background: var(--accent-hover);
+      }
+
+      .frame-container {
+        flex: 1;
+        position: relative;
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background-color: var(--bg-primary);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+        <h1>SleepersCode</h1>
+        <span class="version">DevTools v2.5</span>
+      </div>
+
+      <nav class="nav-menu">
+        <div
+          class="nav-item active"
+          data-url="agent-sandbox.html"
+          data-title="LLM Function Calling &amp; Tool Sandbox"
+        >
+          <span class="icon">🤖</span>
+          <span>Agent Tool Sandbox</span>
+        </div>
+
+        <div
+          class="nav-item"
+          data-url="ast-visualizer.html"
+          data-title="Code AST &amp; Syntax Token Visualizer"
+        >
+          <span class="icon">🌳</span>
+          <span>AST &amp; Syntax Tokenizer</span>
+        </div>
+
+        <div
+          class="nav-item"
+          data-url="stream-debugger.html"
+          data-title="WebSocket &amp; JSON-RPC Stream Debugger"
+        >
+          <span class="icon">⚡</span>
+          <span>Stream Protocol Debugger</span>
+        </div>
+
+        <div
+          class="nav-item"
+          data-url="prompt-composer.html"
+          data-title="Prompt Template Composer &amp; Previewer"
+        >
+          <span class="icon">📝</span>
+          <span>Prompt Template Studio</span>
+        </div>
+
+        <div
+          class="nav-item"
+          data-url="rate-limiter.html"
+          data-title="Token Bucket Rate Limiter &amp; Alerts"
+        >
+          <span class="icon">🪣</span>
+          <span>Rate Limiter &amp; Alerts</span>
+        </div>
+
+        <div
+          class="nav-item"
+          data-url="concurrency-monitor.html"
+          data-title="Distributed Lock &amp; Lease Concurrency Monitor"
+        >
+          <span class="icon">🔒</span>
+          <span>Concurrency &amp; Locks</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="dot"></span>
+          <span>Shared Engine Online</span>
+        </div>
+        <div>Contributor: <strong>Dheeraj1109g</strong></div>
+        <div style="opacity: 0.7">Repo: sleeperscode:main</div>
+      </div>
+    </aside>
+
+    <!-- Content Viewport -->
+    <main class="main-viewport">
+      <header class="topbar">
+        <div class="tool-title" id="currentToolTitle">Agent Tool Sandbox</div>
+        <div class="topbar-actions">
+          <a
+            href="https://github.com/yuno7777/sleeperscode"
+            target="_blank"
+            rel="noopener"
+            class="btn"
+          >
+            <span>GitHub Upstream</span>
+          </a>
+          <a
+            href="https://github.com/Dheeraj1109g/sleeperscode"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-accent"
+          >
+            <span>Personal Fork</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="frame-container">
+        <iframe id="toolFrame" src="agent-sandbox.html"></iframe>
+      </div>
+    </main>
+
+    <script>
+      const navItems = document.querySelectorAll(".nav-item");
+      const toolFrame = document.getElementById("toolFrame");
+      const toolTitle = document.getElementById("currentToolTitle");
+
+      navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          navItems.forEach((i) => i.classList.remove("active"));
+          item.classList.add("active");
+
+          const url = item.getAttribute("data-url");
+          const title = item.getAttribute("data-title");
+
+          toolFrame.src = url;
+          toolTitle.textContent = title;
+        });
+      });
+    </script>
+  </body>
+</html>
